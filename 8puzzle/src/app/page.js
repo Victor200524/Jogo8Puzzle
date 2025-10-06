@@ -4,13 +4,11 @@ import Board from "@/components/Board";
 import Controls from "@/components/Controls";
 import Stats from "@/components/Stats";
 import { useEffect, useState } from "react";
-// A importação do solver foi REMOVIDA
 import Rodape from "@/components/Rodape";
 
 const GOAL_DEFAULT = [1, 2, 3, 4, 5, 6, 7, 8, 0];
 
 export default function Home() {
-  // Os estados continuam os mesmos
   const [state, setState] = useState([]); // Inicia vazio, pois buscará do backend
   const [goal, setGoal] = useState(GOAL_DEFAULT);
   const [algo, setAlgo] = useState("ASTAR");
@@ -22,7 +20,7 @@ export default function Home() {
   const [metrics, setMetrics] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // NOVO: Busca um tabuleiro inicial do backend quando o componente é montado
+  // Busca um tabuleiro inicial do backend quando o componente é montado
   useEffect(() => {
     const fetchInitialBoard = async () => {
       setBusy(true);
@@ -40,7 +38,7 @@ export default function Home() {
     fetchInitialBoard();
   }, []); // O array vazio [] garante que isso rode apenas uma vez
 
-  // ATUALIZADO: A função 'move' agora chama o backend
+  // A função 'move' agora chama o backend
   const move = async (idx) => {
     if (playing || busy || path.length) return;
     setBusy(true);
@@ -59,7 +57,7 @@ export default function Home() {
     }
   };
 
-  // ATUALIZADO: A função 'onShuffle' agora chama o backend
+  // A função 'onShuffle' agora chama o backend
   const onShuffle = async () => {
     resetPlayback();
     setBusy(true);
@@ -74,7 +72,7 @@ export default function Home() {
     }
   };
   
-  // ATUALIZADO: Sua função 'onSolve' com fetch, que já estava correta
+  // A função 'onSolve' com fetch, que já estava correta
   const onSolve = async () => {
     resetPlayback();
     setBusy(true);
@@ -107,7 +105,7 @@ export default function Home() {
     }
   };
   
-  // A lógica de reprodução do caminho não muda
+  // Repordução do caminho
   useEffect(() => {
     if (!playing || cursor >= path.length) return;
     const id = setTimeout(() => {
@@ -117,9 +115,13 @@ export default function Home() {
     return () => clearTimeout(id);
   }, [playing, cursor, path, speed]);
 
-  const resetPlayback = () => { setPath([]); setCursor(0); setPlaying(false); setMetrics(null); };
+  const resetPlayback = () => { 
+    setPath([]); 
+    setCursor(0); 
+    setPlaying(false); 
+    setMetrics(null); 
+  }; // Reseta o playback e métricas
 
-  // O JSX (a parte visual) não precisa de nenhuma alteração
   return (
     <>
       <main className="container">
