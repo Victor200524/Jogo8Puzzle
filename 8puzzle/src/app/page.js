@@ -4,39 +4,110 @@ import Board from "@/components/Board";
 import Controls from "@/components/Controls";
 import Stats from "@/components/Stats";
 import { useEffect, useState } from "react";
-import { solveClient, shuffleSolvable } from "@/lib/solver";
+// A importação do solver foi REMOVIDA
 import Rodape from "@/components/Rodape";
 
-const GOAL_DEFAULT = [1,2,3,4,5,6,7,8,0]; // estado objetivo padrão
+const GOAL_DEFAULT = [1, 2, 3, 4, 5, 6, 7, 8, 0];
 
 export default function Home() {
-  const [state, setState] = useState([1,2,3,4,0,6,7,5,8]);
+  // Os estados continuam os mesmos
+  const [state, setState] = useState([]); // Inicia vazio, pois buscará do backend
   const [goal, setGoal] = useState(GOAL_DEFAULT);
-  const [algo, setAlgo] = useState("ASTAR");         // ASTAR | GREEDY é o outro possível valor aqui
-  const [heur, setHeur] = useState("MANHATTAN");     // MANHATTAN | MISPLACED é o outro possível valor aqui 
-  const [speed, setSpeed] = useState(600);           // ms entre cada passo na reprodução do caminho
+  const [algo, setAlgo] = useState("ASTAR");
+  const [heur, setHeur] = useState("MANHATTAN");
+  const [speed, setSpeed] = useState(600);
   const [playing, setPlaying] = useState(false);
   const [path, setPath] = useState([]);
   const [cursor, setCursor] = useState(0);
   const [metrics, setMetrics] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  const move = (idx) => {
-    if (playing || busy || path.length) return;
-    const zero = state.indexOf(0);
-    const neighbors = {
-      0:[1,3],1:[0,2,4],2:[1,5],
-      3:[0,4,6],4:[1,3,5,7],5:[2,4,8],
-      6:[3,7],7:[4,6,8],8:[5,7]
+  // NOVO: Busca um tabuleiro inicial do backend quando o componente é montado
+  useEffect(() => {
+    const fetchInitialBoard = async () => {
+      setBusy(true);
+      try {
+        const response = await fetch("http://localhost:8080/api/shuffle");
+        const initialBoard = await response.json();
+        setState(initialBoard);
+      } catch (e) {
+        alert("Não foi possível conectar ao backend para buscar o tabuleiro inicial.");
+        setState([1, 2, 3, 4, 5, 6, 7, 8, 0]); // Estado padrão em caso de erro
+      } finally {
+        setBusy(false);
+      }
     };
-    if (neighbors[zero].includes(idx)) {
-      const next = [...state];
-      [next[zero], next[idx]] = [next[idx], next[zero]];
-      setState(next);
+    fetchInitialBoard();
+  }, []); // O array vazio [] garante que isso rode apenas uma vez
+
+  // ATUALIZADO: A função 'move' agora chama o backend
+  const move = async (idx) => {
+    if (playing || busy || path.length) return;
+    setBusy(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/move", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentState: state, tileIndex: idx })
+      });
+      const newState = await response.json();
+      setState(newState);
+    } catch (e) {
+      alert("Erro ao tentar mover a peça. Verifique se o backend está rodando.");
+    } finally {
+      setBusy(false);
     }
   };
 
-  // reprodução do caminho
+  // ATUALIZADO: A função 'onShuffle' agora chama o backend
+  const onShuffle = async () => {
+    resetPlayback();
+    setBusy(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/shuffle");
+      const newBoard = await response.json();
+      setState(newBoard);
+    } catch (e) {
+      alert("Erro ao embaralhar. Verifique se o backend está rodando.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  
+  // ATUALIZADO: Sua função 'onSolve' com fetch, que já estava correta
+  const onSolve = async () => {
+    resetPlayback();
+    setBusy(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/solve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          initial: state,
+          goal,
+          algorithm: algo,
+          heuristic: heur,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Erro do servidor: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setPath((data.path || []).slice(1));
+      setMetrics(data.metrics || null);
+      setCursor(0);
+      setPlaying(true);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  
+  // A lógica de reprodução do caminho não muda
   useEffect(() => {
     if (!playing || cursor >= path.length) return;
     const id = setTimeout(() => {
@@ -46,42 +117,18 @@ export default function Home() {
     return () => clearTimeout(id);
   }, [playing, cursor, path, speed]);
 
-  const resetPlayback = () => { setPath([]); setCursor(0); setPlaying(false); };
+  const resetPlayback = () => { setPath([]); setCursor(0); setPlaying(false); setMetrics(null); };
 
-  const onShuffle = () => {
-    resetPlayback();
-    setState(shuffleSolvable(goal));
-  };
-
-  const onSolve = async () => {
-    resetPlayback();
-    setBusy(true);
-    const t0 = performance.now();
-    try {
-      const { path, visited, depth, cost } = solveClient(state, goal, algo, heur);
-      setPath(path.slice(1)); // primeiro estado já é o atual
-      setMetrics({ millis: Math.round(performance.now() - t0), visited, depth, cost });
-      setCursor(0);
-      setPlaying(true);
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  // O JSX (a parte visual) não precisa de nenhuma alteração
   return (
     <>
       <main className="container">
-        {/* painel da esquerda */}
         <section className="panel">
           <Header />
           <div className="sub">Clique nas peças adjacentes ao vazio para mover. Embaralhe e use o solver para encontrar o caminho.</div>
           <div style={{margin:"16px 0"}} />
           <Board state={state} onClickTile={move} />
         </section>
-
-        {/* painel da direita */}
         <aside className="panel stack">
           <Controls
             algo={algo} setAlgo={setAlgo}
@@ -100,7 +147,6 @@ export default function Home() {
           <Stats metrics={metrics} pathLen={path.length} />
         </aside>
       </main>
-
       <div className="container">
         <Rodape />
       </div>
