@@ -10,15 +10,15 @@ const GOAL_DEFAULT = [1, 2, 3, 4, 5, 6, 7, 8, 0];
 
 export default function Home() {
   const [state, setState] = useState([]); // Inicia vazio, pois buscará do backend
-  const [goal, setGoal] = useState(GOAL_DEFAULT);
-  const [algo, setAlgo] = useState("ASTAR");
-  const [heur, setHeur] = useState("MANHATTAN");
-  const [speed, setSpeed] = useState(600);
-  const [playing, setPlaying] = useState(false);
-  const [path, setPath] = useState([]);
-  const [cursor, setCursor] = useState(0);
-  const [metrics, setMetrics] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [goal, setGoal] = useState(GOAL_DEFAULT); // Estado objetivo
+  const [algo, setAlgo] = useState("ASTAR"); // Algoritmo padrão
+  const [heur, setHeur] = useState("MANHATTAN"); // Heurística padrão
+  const [speed, setSpeed] = useState(600); // Velocidade padrão de reprodução em ms
+  const [playing, setPlaying] = useState(false); // Se está reproduzindo o caminho
+  const [path, setPath] = useState([]); // Caminho de estados a serem reproduzidos
+  const [cursor, setCursor] = useState(0); // Posição atual no caminho
+  const [metrics, setMetrics] = useState(null); // Métricas retornadas pelo backend
+  const [busy, setBusy] = useState(false); // Se está aguardando resposta do backend
 
   // Busca um tabuleiro inicial do backend quando o componente é montado
   useEffect(() => {
